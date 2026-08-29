@@ -23,29 +23,50 @@ let totalBoards = 0, currentIndex = 0;
 function parseCards(suit) { return suit ? suit.split('').join(' ') : '—'; }
 
 function parseDeal(dealLine) {
-    const p = dealLine.replace("N:", "").replace(/[cxy]/gi, "").replace(/T/g, "t").split(" ");
-    const getHand = (s) => { const k = s.split("."); return { S: parseCards(k[0]), H: parseCards(k[1]), D: parseCards(k[2]), C: parseCards(k[3]) }; };
-    return { N: getHand(p[0]), E: getHand(p[1]), S: getHand(p[2]), W: getHand(p[3]) };
+    const p = dealLine.replace("N:", "").split(" ");
+    const getHand = (s) => { const k = s.split("."); return { S: parseCards(k), H: parseCards(k), D: parseCards(k), C: parseCards(k) }; };
+    return { N: getHand(p), E: getHand(p), S: getHand(p), W: getHand(p) };
 }
 
-function generateBboUrl(dealLine, boardNo, contract, vul) {
-    const clean = dealLine.replace("N:", "").replace(/[cxy]/gi, "").replace(/T/g, "t").split(" ");
-    if(clean.length < 4) return "#";
-    const vMap = { "NONE": "-", "ALL": "b", "BOTH": "b", "NS": "n", "EW": "e" };
-    const bboVul = vul ? (vMap[vul.toUpperCase().trim()] || "-") : "-";
-    const linData = "md|1" + clean[2] + "," + clean[3] + "," + clean[0] + "," + clean[1] + "|ah|Board " + (boardNo || 1) + "|sv|" + bboVul + "|mb|" + contract.trim().toUpperCase().replace(/NT/g, "N") + "|mb|p|mb|p|mb|p|";
-    return "https://bridgebase.com" + encodeURIComponent(linData);
+// Kılavuzdaki Doğru ve Güvenli Parametrik Yapı (+ İnteraktif Buton Desteği)
+function generateBboUrl(dealLine, boardNo, contract, dealer, vul) {
+    const cleanDeal = dealLine.replace("N:", "");
+    const parts = cleanDeal.split(" ");
+    if(parts.length < 4) return "#";
+
+    // PBN formatını BBO'nun tanıdığı s...h...d...c... formatına çeviriyoruz
+    const formatHand = (str) => {
+        if (!str) return "";
+        const suits = str.replace(/T/g, "t").replace(/[cxy]/gi, "").split(".");
+        return "s" + (suits[0]||"") + "h" + (suits[1]||"") + "d" + (suits[2]||"") + "c" + (suits[3]||"");
+    };
+
+    const bboVulMap = { "NONE": "n", "ALL": "b", "BOTH": "b", "NS": "n", "EW": "e" };
+    const bboVul = vul ? (bboVulMap[vul.toUpperCase().trim()] || "n") : "n";
+    const bboDealer = dealer ? dealer.trim().toLowerCase() : "n";
+    const cleanBoard = boardNo.replace(/[^\d]/g, "");
+
+    // Kılavuza göre interaktif butonları açan sihirli parametre: action=play
+    let params = [
+        "n=" + encodeURIComponent(formatHand(parts[0])),
+        "e=" + encodeURIComponent(formatHand(parts[1])),
+        "s=" + encodeURIComponent(formatHand(parts[2])),
+        "w=" + encodeURIComponent(formatHand(parts[3])),
+        "d=" + encodeURIComponent(bboDealer),
+        "v=" + encodeURIComponent(bboVul),
+        "b=" + encodeURIComponent(cleanBoard || "1"),
+        "action=play"
+    ];
+
+    return "https://bridgebase.com?" + params.join("&");
 }
 
 function updateGallery() {
     document.querySelectorAll('.tab-btn, .board-content').forEach(el => el.classList.remove('active'));
-    
     const activeBtn = document.getElementById("btn-idx-" + currentIndex);
     const activeBoard = document.getElementById("board-idx-" + currentIndex);
-    
     if (activeBtn) activeBtn.classList.add('active');
     if (activeBoard) activeBoard.classList.add('active');
-    
     document.getElementById('prev-btn').disabled = (currentIndex === 0);
     document.getElementById('next-btn').disabled = (currentIndex === totalBoards - 1);
 }
@@ -70,10 +91,9 @@ fetch('eller.pbn?v=' + Math.random())
             if (!dealLine) return;
             const cards = parseDeal(dealLine);
             const activeClass = (localCounter === 0) ? "active" : "";
-            const bboUrl = generateBboUrl(dealLine, boardNo, contract, vul);
+            const bboUrl = generateBboUrl(dealLine, boardNo, contract, dealer, vul);
 
             buttonsHtml += '<button id="btn-idx-' + localCounter + '" class="tab-btn ' + activeClass + '" onclick="switchBoard(' + localCounter + ')">Bord ' + boardNo + '</button>';
-            
             galleryHtml += '<div id="board-idx-' + localCounter + '" class="board-content ' + activeClass + '">' +
                 '<div class="bridge-table">' +
                     '<div class="info">Bord ' + boardNo + ' | Dağıtan: ' + dealer + ' | Zafiyet: ' + vul + '<br>Kontrat: ' + contract + ' | Sonuç: ' + result + '</div>' +
