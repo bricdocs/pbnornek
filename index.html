@@ -32,25 +32,30 @@ function parseDeal(dealLine) {
     const parsePlayer = (str) => {
         const suits = str.split(".");
         return { 
-            S: parseCards(suits[0]), 
-            H: parseCards(suits[1]), 
-            D: parseCards(suits[2]), 
-            C: parseCards(suits[3]) 
+            S: parseCards(suits), 
+            H: parseCards(suits), 
+            D: parseCards(suits), 
+            C: parseCards(suits) 
         };
     };
     return { 
-        N: parsePlayer(directions[0]), 
-        E: parsePlayer(directions[1]), 
-        S: parsePlayer(directions[2]), 
-        W: parsePlayer(directions[3]) 
+        N: parsePlayer(directions), 
+        E: parsePlayer(directions), 
+        S: parsePlayer(directions), 
+        W: parsePlayer(directions) 
     };
 }
 
-// Güvenli BBO URL Oluşturucu (Özel karakter barındırmaz, Chrome engellemez)
+// BBO el görüntüleyici için temiz URL üreten fonksiyon
 function generateBboUrl(dealLine, boardNo, contract) {
     const bboHands = dealLine.replace("N:", "").replace(/ /g, ",");
     const baseUrl = "https://bridgebase.com";
-    const linData = `md|1${bboHands}|b|${boardNo || 1}|ct|${contract || 'Pas'}|`;
+    
+    // Saf metinleri temiz parametre haline getiriyoruz
+    const cleanBoard = boardNo.replace(/[^\d]/g, ""); // Sadece sayı kalacak şekilde temizle
+    const cleanContract = contract.trim();
+
+    const linData = `md|1${bboHands}|b|${cleanBoard || 1}|ct|${cleanContract || 'Pas'}|`;
     return `${baseUrl}?lin=${encodeURIComponent(linData)}`;
 }
 
@@ -92,12 +97,24 @@ fetch('eller.pbn?v=' + Math.random())
         rawBoards.forEach(boardText => {
             if(!boardText.trim()) return;
 
-            const boardNo = boardText.match(/\[Board "([^"]+)"\]/) ? boardText.match(/\[Board "([^"]+)"\]/)[1] : "?";
-            const dealer = boardText.match(/\[Dealer "([^"]+)"\]/) ? boardText.match(/\[Dealer "([^"]+)"\]/)[1] : "?";
-            const vul = boardText.match(/\[Vulnerable "([^"]+)"\]/) ? boardText.match(/\[Vulnerable "([^"]+)"\]/)[1] : "None";
-            const dealLine = boardText.match(/\[Deal "([^"]+)"\]/) ? boardText.match(/\[Deal "([^"]+)"\]/)[1] : null;
-            const contract = boardText.match(/\[Contract "([^"]+)"\]/) ? boardText.match(/\[Contract "([^"]+)"\]/)[1] : "Pas";
-            const result = boardText.match(/\[Result "([^"]+)"\]/) ? boardText.match(/\[Result "([^"]+)"\]/)[1] : "";
+            // REGEX Düzeltmesi: [1] indeksi eklenerek sadece tırnak içindeki saf değerler alındı
+            const boardMatch = boardText.match(/\[Board "([^"]+)"\]/);
+            const boardNo = boardMatch ? boardMatch[1] : "?";
+
+            const dealerMatch = boardText.match(/\[Dealer "([^"]+)"\]/);
+            const dealer = dealerMatch ? dealerMatch[1] : "?";
+
+            const vulMatch = boardText.match(/\[Vulnerable "([^"]+)"\]/);
+            const vul = vulMatch ? vulMatch[1] : "None";
+
+            const dealMatch = boardText.match(/\[Deal "([^"]+)"\]/);
+            const dealLine = dealMatch ? dealMatch[1] : null;
+
+            const contractMatch = boardText.match(/\[Contract "([^"]+)"\]/);
+            const contract = contractMatch ? contractMatch[1] : "Pas";
+
+            const resultMatch = boardText.match(/\[Result "([^"]+)"\]/);
+            const result = resultMatch ? resultMatch[1] : "";
 
             if (!dealLine) return;
 
