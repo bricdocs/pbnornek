@@ -28,7 +28,6 @@ function parseDeal(dealLine) {
     return { N: getHand(p), E: getHand(p), S: getHand(p), W: getHand(p) };
 }
 
-// Tam Olarak İstediğiniz, Sadece s...h...d...c... Parametrelerini Kullanan Kılavuz Kodu
 function generateBboUrl(dealLine, boardNo, contract, dealer, vul) {
     const cleanDeal = dealLine.replace("N:", "");
     const parts = cleanDeal.split(" ");
@@ -53,7 +52,6 @@ function generateBboUrl(dealLine, boardNo, contract, dealer, vul) {
     const bboDealer = dealer ? dealer.trim().toLowerCase() : "n";
     const cleanBoard = boardNo.replace(/[^\d]/g, "");
 
-    // Tam İstediğiniz Parametrik Yapı + İnteraktif Butonları Açan "action=play"
     let params = [
         "n=" + encodeURIComponent(formatHandForBbo(parts[0])),
         "e=" + encodeURIComponent(formatHandForBbo(parts[1])),
@@ -62,7 +60,7 @@ function generateBboUrl(dealLine, boardNo, contract, dealer, vul) {
         "d=" + encodeURIComponent(bboDealer),
         "v=" + encodeURIComponent(bboVul),
         "b=" + encodeURIComponent(cleanBoard || "1"),
-        "action=play" // Butonları, Zon Durumunu ve Bord No'yu aktifleştiren resmi parametre
+        "action=play"
     ];
 
     return "https://bridgebase.com?" + params.join("&");
@@ -115,7 +113,7 @@ fetch('eller.pbn?v=' + Math.random())
                         '</div>' +
                         '<div class="compass"><div>N</div><div style="display:flex; gap:15px;"><span>W</span><span>E</span></div><div>S</div></div>' +
                         '<div class="hand east">' +
-                            '<div class="suit"><span class="spade">♠</span> ' + cards.E.S}</div><div class="suit"><span class="heart">♥</span> ' + cards.E.H + '</div>' +
+                            '<div class="suit"><span class="spade">♠</span> ' + cards.E.S + '</div><div class="suit"><span class="heart">♥</span> ' + cards.E.H + '</div>' +
                             '<div class="suit"><span class="diamond">♦</span> ' + cards.E.D + '</div><div class="suit"><span class="club">♣</span> ' + cards.E.C + '</div>' +
                         '</div>' +
                     '</div>' +
