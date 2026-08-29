@@ -33,14 +33,19 @@ function generateBboUrl(dealLine, boardNo, contract, vul) {
     if(clean.length < 4) return "#";
     const vMap = { "NONE": "-", "ALL": "b", "BOTH": "b", "NS": "n", "EW": "e" };
     const bboVul = vul ? (vMap[vul.toUpperCase().trim()] || "-") : "-";
-    const linData = `md|1${clean[2]},${clean[3]},${clean[0]},${clean[1]}|ah|Board ${boardNo || 1}|sv|${bboVul}|mb|${contract.trim().toUpperCase().replace(/NT/g, "N")}|mb|p|mb|p|mb|p|`;
-    return `https://bridgebase.com{encodeURIComponent(linData)}`;
+    const linData = "md|1" + clean[2] + "," + clean[3] + "," + clean[0] + "," + clean[1] + "|ah|Board " + (boardNo || 1) + "|sv|" + bboVul + "|mb|" + contract.trim().toUpperCase().replace(/NT/g, "N") + "|mb|p|mb|p|mb|p|";
+    return "https://bridgebase.com" + encodeURIComponent(linData);
 }
 
 function updateGallery() {
     document.querySelectorAll('.tab-btn, .board-content').forEach(el => el.classList.remove('active'));
-    document.getElementById(`btn-idx-${currentIndex}`)?.classList.add('active');
-    document.getElementById(`board-idx-${currentIndex}`)?.classList.add('active');
+    
+    const activeBtn = document.getElementById("btn-idx-" + currentIndex);
+    const activeBoard = document.getElementById("board-idx-" + currentIndex);
+    
+    if (activeBtn) activeBtn.classList.add('active');
+    if (activeBoard) activeBoard.classList.add('active');
+    
     document.getElementById('prev-btn').disabled = (currentIndex === 0);
     document.getElementById('next-btn').disabled = (currentIndex === totalBoards - 1);
 }
@@ -48,11 +53,9 @@ function updateGallery() {
 function switchBoard(index) { currentIndex = index; updateGallery(); }
 function navigateBoard(d) { if (currentIndex + d >= 0 && currentIndex + d < totalBoards) { currentIndex += d; updateGallery(); } }
 
-// Satır sonu (\r\n veya \n) karakterlerinden bağımsız, hatasız PBN parçalayıcı
 fetch('eller.pbn?v=' + Math.random())
     .then(r => r.text())
     .then(text => {
-        // Satır sonlarını standart hale getirip blokları ayırıyoruz (Kilitlenmeyi çözen kısım)
         const normalizedText = text.replace(/\r\n/g, "\n");
         const rawBoards = normalizedText.split(/\n\s*\n/);
         let buttonsHtml = "", galleryHtml = "", localCounter = 0;
@@ -69,33 +72,34 @@ fetch('eller.pbn?v=' + Math.random())
             const activeClass = (localCounter === 0) ? "active" : "";
             const bboUrl = generateBboUrl(dealLine, boardNo, contract, vul);
 
-            buttonsHtml += `<button id="btn-idx-${localCounter}" class="tab-btn ${activeClass}" onclick="switchBoard(${localCounter})">Bord ${boardNo}</button>`;
-            galleryHtml += `
-            <div id="board-idx-${localCounter}" class="board-content ${activeClass}">
-                <div class="bridge-table">
-                    <div class="info">Bord ${boardNo} | Dağıtan: ${dealer} | Zafiyet: ${vul}<br>Kontrat: ${contract} | Sonuç: ${result}</div>
-                    <div class="hand north">
-                        <div class="suit"><span class="spade">♠</span> ${cards.N.S}</div><div class="suit"><span class="heart">♥</span> ${cards.N.H}</div>
-                        <div class="suit"><span class="diamond">♦</span> ${cards.N.D}</div><div class="suit"><span class="club">♣</span> ${cards.N.C}</div>
-                    </div>
-                    <div class="middle-row">
-                        <div class="hand west">
-                            <div class="suit"><span class="spade">♠</span> ${cards.W.S}</div><div class="suit"><span class="heart">♥</span> ${cards.W.H}</div>
-                            <div class="suit"><span class="diamond">♦</span> ${cards.W.D}</div><div class="suit"><span class="club">♣</span> ${cards.W.C}</div>
-                        </div>
-                        <div class="compass"><div>N</div><div style="display:flex; gap:15px;"><span>W</span><span>E</span></div><div>S</div></div>
-                        <div class="hand east">
-                            <div class="suit"><span class="spade">♠</span> ${cards.E.S}</div><div class="suit"><span class="heart">♥</span> ${cards.E.H}</div>
-                            <div class="suit"><span class="diamond">♦</span> ${cards.E.D}</div><div class="suit"><span class="club">♣</span> ${cards.E.C}</div>
-                        </div>
-                    </div>
-                    <div class="hand south">
-                        <div class="suit"><span class="spade">♠</span> ${cards.S.S}</div><div class="suit"><span class="heart">♥</span> ${cards.S.H}</div>
-                        <div class="suit"><span class="diamond">♦</span> ${cards.S.D}</div><div class="suit"><span class="club">♣</span> ${cards.S.C}</div>
-                    </div>
-                </div>
-                <a href="${bboUrl}" target="_blank" class="bbo-btn">BBO'da İnteraktif Oyna</a>
-            </div>`;
+            buttonsHtml += '<button id="btn-idx-' + localCounter + '" class="tab-btn ' + activeClass + '" onclick="switchBoard(' + localCounter + ')">Bord ' + boardNo + '</button>';
+            
+            galleryHtml += '<div id="board-idx-' + localCounter + '" class="board-content ' + activeClass + '">' +
+                '<div class="bridge-table">' +
+                    '<div class="info">Bord ' + boardNo + ' | Dağıtan: ' + dealer + ' | Zafiyet: ' + vul + '<br>Kontrat: ' + contract + ' | Sonuç: ' + result + '</div>' +
+                    '<div class="hand north">' +
+                        '<div class="suit"><span class="spade">♠</span> ' + cards.N.S + '</div><div class="suit"><span class="heart">♥</span> ' + cards.N.H + '</div>' +
+                        '<div class="suit"><span class="diamond">♦</span> ' + cards.N.D + '</div><div class="suit"><span class="club">♣</span> ' + cards.N.C + '</div>' +
+                    '</div>' +
+                    '<div class="middle-row">' +
+                        '<div class="hand west">' +
+                            '<div class="suit"><span class="spade">♠</span> ' + cards.W.S + '</div><div class="suit"><span class="heart">♥</span> ' + cards.W.H + '</div>' +
+                            '<div class="suit"><span class="diamond">♦</span> ' + cards.W.D + '</div><div class="suit"><span class="club">♣</span> ' + cards.W.C + '</div>' +
+                        '</div>' +
+                        '<div class="compass"><div>N</div><div style="display:flex; gap:15px;"><span>W</span><span>E</span></div><div>S</div></div>' +
+                        '<div class="hand east">' +
+                            '<div class="suit"><span class="spade">♠</span> ' + cards.E.S + '</div><div class="suit"><span class="heart">♥</span> ' + cards.E.H + '</div>' +
+                            '<div class="suit"><span class="diamond">♦</span> ' + cards.E.D + '</div><div class="suit"><span class="club">♣</span> ' + cards.E.C + '</div>' +
+                        '</div>' +
+                    '</div>' +
+                    '<div class="hand south">' +
+                        '<div class="suit"><span class="spade">♠</span> ' + cards.S.S + '</div><div class="suit"><span class="heart">♥</span> ' + cards.S.H + '</div>' +
+                        '<div class="suit"><span class="diamond">♦</span> ' + cards.S.D + '</div><div class="suit"><span class="club">♣</span> ' + cards.S.C + '</div>' +
+                    '</div>' +
+                '</div>' +
+                '<a href="' + bboUrl + '" target="_blank" class="bbo-btn">BBO\'da İnteraktif Oyna</a>' +
+            '</div>';
+            
             localCounter++;
         });
 
