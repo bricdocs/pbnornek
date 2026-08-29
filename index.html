@@ -32,30 +32,25 @@ function parseDeal(dealLine) {
     const parsePlayer = (str) => {
         const suits = str.split(".");
         return { 
-            S: parseCards(suits), 
-            H: parseCards(suits), 
-            D: parseCards(suits), 
-            C: parseCards(suits) 
+            S: parseCards(suits[0]), 
+            H: parseCards(suits[1]), 
+            D: parseCards(suits[2]), 
+            C: parseCards(suits[3]) 
         };
     };
     return { 
-        N: parsePlayer(directions), 
-        E: parsePlayer(directions), 
-        S: parsePlayer(directions), 
-        W: parsePlayer(directions) 
+        N: parsePlayer(directions[0]), 
+        E: parsePlayer(directions[1]), 
+        S: parsePlayer(directions[2]), 
+        W: parsePlayer(directions[3]) 
     };
 }
 
 // BBO el görüntüleyici için temiz URL üreten fonksiyon
 function generateBboUrl(dealLine, boardNo, contract) {
     const bboHands = dealLine.replace("N:", "").replace(/ /g, ",");
-    const baseUrl = "https://bridgebase.com";
-    
-    // Saf metinleri temiz parametre haline getiriyoruz
-    const cleanBoard = boardNo.replace(/[^\d]/g, ""); // Sadece sayı kalacak şekilde temizle
-    const cleanContract = contract.trim();
-
-    const linData = `md|1${bboHands}|b|${cleanBoard || 1}|ct|${cleanContract || 'Pas'}|`;
+    const baseUrl = "https://www.bridgebase.com/tools/handviewer.html";
+    const linData = `md|1${bboHands}|b|${boardNo}|ct|${contract}|`;
     return `${baseUrl}?lin=${encodeURIComponent(linData)}`;
 }
 
@@ -86,6 +81,13 @@ function navigateBoard(direction) {
     }
 }
 
+// PBN içindeki tag değerlerini güvenli bir şekilde çeken yardımcı fonksiyon
+function getPbnTag(text, tagName, defaultValue) {
+    const regex = new RegExp('\\[' + tagName + ' "([^"]+)"\\]');
+    const match = text.match(regex);
+    return match ? match[1] : defaultValue;
+}
+
 fetch('eller.pbn?v=' + Math.random())
     .then(response => response.text())
     .then(text => {
@@ -97,24 +99,13 @@ fetch('eller.pbn?v=' + Math.random())
         rawBoards.forEach(boardText => {
             if(!boardText.trim()) return;
 
-            // REGEX Düzeltmesi: [1] indeksi eklenerek sadece tırnak içindeki saf değerler alındı
-            const boardMatch = boardText.match(/\[Board "([^"]+)"\]/);
-            const boardNo = boardMatch ? boardMatch[1] : "?";
-
-            const dealerMatch = boardText.match(/\[Dealer "([^"]+)"\]/);
-            const dealer = dealerMatch ? dealerMatch[1] : "?";
-
-            const vulMatch = boardText.match(/\[Vulnerable "([^"]+)"\]/);
-            const vul = vulMatch ? vulMatch[1] : "None";
-
-            const dealMatch = boardText.match(/\[Deal "([^"]+)"\]/);
-            const dealLine = dealMatch ? dealMatch[1] : null;
-
-            const contractMatch = boardText.match(/\[Contract "([^"]+)"\]/);
-            const contract = contractMatch ? contractMatch[1] : "Pas";
-
-            const resultMatch = boardText.match(/\[Result "([^"]+)"\]/);
-            const result = resultMatch ? resultMatch[1] : "";
+            // Güvenli tag okuma sistemine geçildi
+            const boardNo = getPbnTag(boardText, "Board", "?");
+            const dealer = getPbnTag(boardText, "Dealer", "?");
+            const vul = getPbnTag(boardText, "Vulnerable", "None");
+            const dealLine = getPbnTag(boardText, "Deal", null);
+            const contract = getPbnTag(boardText, "Contract", "Pas");
+            const result = getPbnTag(boardText, "Result", "");
 
             if (!dealLine) return;
 
