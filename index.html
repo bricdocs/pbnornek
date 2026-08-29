@@ -3,10 +3,11 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Briç El Diyagramı</title>
+    <title>PBN'den Okunan Dinamik Briç Elleri</title>
     <style>
-        body { font-family: Arial, sans-serif; background-color: #f4f4f4; padding: 20px; display: flex; justify-content: center; }
-        .bridge-table { background: #1e5631; color: white; padding: 20px; border-radius: 10px; box-shadow: 0 4px 10px rgba(0,0,0,0.3); width: 320px; position: relative; font-weight: bold; }
+        body { font-family: Arial, sans-serif; background-color: #eceff1; padding: 20px; display: flex; flex-direction: column; align-items: center; gap: 30px; }
+        h1 { color: #2c3e50; margin-bottom: 5px; text-align: center; }
+        .bridge-table { background: #1e5631; color: white; padding: 20px; border-radius: 10px; box-shadow: 0 4px 15px rgba(0,0,0,0.25); width: 320px; font-weight: bold; }
         .info { text-align: center; margin-bottom: 15px; border-bottom: 1px solid rgba(255,255,255,0.3); padding-bottom: 5px; font-size: 14px; }
         .hand { width: 90px; }
         .north { margin: 0 auto; text-align: left; }
@@ -24,48 +25,111 @@
 </head>
 <body>
 
-<div class="bridge-table">
-    <div class="info">Bord 1 | Dağıtan: N | Zafiyet: Yok<br>Kontrat: 1NT (N) | Sonuç: 7</div>
+    <h1>Turnuva Sonuçları (PBN'den Canlı)</h1>
+    <div id="container" style="display: flex; flex-wrap: wrap; gap: 20px; justify-content: center;">PBN Dosyası Yükleniyor...</div>
+
+<script>
+// PBN formatındaki kartları ayıran fonksiyon (. karakterine göre böler)
+function parseCards(suitString) {
+    return suitString ? suitString.split('').join(' ') : '—';
+}
+
+// Tek bir eli PBN formatından alan fonksiyon (N:Kuzey.Doğu.Güney.Batı)
+function parseDeal(dealLine) {
+    const cleanDeal = dealLine.replace("N:", "");
+    const directions = cleanDeal.split(" ");
     
-    <!-- KUZEY -->
-    <div class="hand north">
-        <div class="suit"><span class="spade">♠</span> A T 8 5</div>
-        <div class="suit"><span class="heart">♥</span> K 4</div>
-        <div class="suit"><span class="diamond">♦</span> 6 3 2</div>
-        <div class="suit"><span class="club">♣</span> A 8 5 4</div>
-    </div>
+    const parsePlayer = (str) => {
+        const suits = str.split(".");
+        return {
+            S: parseCards(suits[0]),
+            H: parseCards(suits[1]),
+            D: parseCards(suits[2]),
+            C: parseCards(suits[3])
+        };
+    };
 
-    <!-- BATI / PUSULA / DOĞU -->
-    <div class="middle-row">
-        <div class="hand west">
-            <div class="suit"><span class="spade">♠</span> K 9 6</div>
-            <div class="suit"><span class="heart">♥</span> 9 7</div>
-            <div class="suit"><span class="diamond">♦</span> A Q 7 5</div>
-            <div class="suit"><span class="club">♣</span> 9 7 6</div>
-        </div>
-        
-        <div class="compass">
-            <div>N</div>
-            <div style="display:flex; gap:15px;"><span>W</span><span>E</span></div>
-            <div>S</div>
-        </div>
-        
-        <div class="hand east">
-            <div class="suit"><span class="spade">♠</span> Q 7 3</div>
-            <div class="suit"><span class="heart">♥</span> A J 3</div>
-            <div class="suit"><span class="diamond">♦</span> T 9 8 4</div>
-            <div class="suit"><span class="club">♣</span> K Q 3</div>
-        </div>
-    </div>
+    return {
+        N: parsePlayer(directions[0]),
+        E: parsePlayer(directions[1]),
+        S: parsePlayer(directions[2]),
+        W: parsePlayer(directions[3])
+    };
+}
 
-    <!-- GÜNEY -->
-    <div class="hand south">
-        <div class="suit"><span class="spade">♠</span> J 4 2</div>
-        <div class="suit"><span class="heart">♥</span> Q T 8 5 2</div>
-        <div class="suit"><span class="diamond">♦</span> K J</div>
-        <div class="suit"><span class="club">♣</span> J T 2</div>
-    </div>
-</div>
+// GitHub üzerindeki pbn dosyasını okuma işlemi
+fetch('eller.pbn')
+    .then(response => response.text())
+    .then(text => {
+        // PBN'deki her bir bordu ayırıyoruz
+        const rawBoards = text.split(/\n\s*\n/);
+        let htmlOutput = "";
+
+        rawBoards.forEach(boardText => {
+            if(!boardText.trim()) return;
+
+            // Regex ile PBN taglerini çekiyoruz
+            const boardNo = boardText.match(/\[Board "([^"]+)"\]/)?.[1] || "?";
+            const dealer = boardText.match(/\[Dealer "([^"]+)"\]/)?.[1] || "?";
+            const vul = boardText.match(/\[Vulnerable "([^"]+)"\]/)?.[1] || "None";
+            const dealLine = boardText.match(/\[Deal "([^"]+)"\]/)?.[1];
+            const contract = boardText.match(/\[Contract "([^"]+)"\]/)?.[1] || "Pas";
+            const result = boardText.match(/\[Result "([^"]+)"\]/)?.[1] || "";
+
+            if (!dealLine) return; // Dağılım yoksa atla
+
+            const cards = parseDeal(dealLine);
+
+            // Her el için HTML şablonu oluşturuyoruz
+            htmlOutput += `
+            <div class="bridge-table">
+                <div class="info">Bord ${boardNo} | Dağıtan: ${dealer} | Zafiyet: ${vul}<br>Kontrat: ${contract} | Sonuç: ${result}</div>
+                
+                <div class="hand north">
+                    <div class="suit"><span class="spade">♠</span> ${cards.N.S}</div>
+                    <div class="suit"><span class="heart">♥</span> ${cards.N.H}</div>
+                    <div class="suit"><span class="diamond">♦</span> ${cards.N.D}</div>
+                    <div class="suit"><span class="club">♣</span> ${cards.N.C}</div>
+                </div>
+
+                <div class="middle-row">
+                    <div class="hand west">
+                        <div class="suit"><span class="spade">♠</span> ${cards.W.S}</div>
+                        <div class="suit"><span class="heart">♥</span> ${cards.W.H}</div>
+                        <div class="suit"><span class="diamond">♦</span> ${cards.W.D}</div>
+                        <div class="suit"><span class="club">♣</span> ${cards.W.C}</div>
+                    </div>
+                    
+                    <div class="compass">
+                        <div>N</div>
+                        <div style="display:flex; gap:15px;"><span>W</span><span>E</span></div>
+                        <div>S</div>
+                    </div>
+                    
+                    <div class="hand east">
+                        <div class="suit"><span class="spade">♠</span> ${cards.E.S}</div>
+                        <div class="suit"><span class="heart">♥</span> ${cards.E.H}</div>
+                        <div class="suit"><span class="diamond">♦</span> ${cards.E.D}</div>
+                        <div class="suit"><span class="club">♣</span> ${cards.E.C}</div>
+                    </div>
+                </div>
+
+                <div class="hand south">
+                    <div class="suit"><span class="spade">♠</span> ${cards.S.S}</div>
+                    <div class="suit"><span class="heart">♥</span> ${cards.S.H}</div>
+                    <div class="suit"><span class="diamond">♦</span> ${cards.S.D}</div>
+                    <div class="suit"><span class="club">♣</span> ${cards.S.C}</div>
+                </div>
+            </div>`;
+        });
+
+        document.getElementById('container').innerHTML = htmlOutput;
+    })
+    .catch(err => {
+        document.getElementById('container').innerHTML = "PBN dosyası yüklenirken hata oluştu.";
+        console.error(err);
+    });
+</script>
 
 </body>
 </html>
