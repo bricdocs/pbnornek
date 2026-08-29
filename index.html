@@ -1,0 +1,262 @@
+#!/usr/bin/perl
+# zet PBN formaat om in html / doc
+# pbn2html versie 0.9
+# datum 17-02-2001
+
+use Time::HiRes qw(gettimeofday);
+$starttime=gettimeofday;
+
+
+#print "Content-type: text/html\n\n"; # print location does not work if this is on
+use CGI::Carp qw(fatalsToBrowser);   # if you get an internal 500 error uncomment this one
+
+&parse_form;
+
+@all       = (0..51);
+@knowncards= ();
+@rest      = ();
+$reststr;
+
+my $OK_CHARS  = '-a-zA-Z0-9_.-][: ()+"';
+$input{'pbn'} =~ s/[^$OK_CHARS]/ /go;
+$pbn          = $input{'pbn'};
+
+my @data = split(/]/,$pbn);
+
+# pick up relefant info
+foreach my $line(@data){
+
+    if($line =~ /\[Dealer/){
+        if   ($line =~ /W/){$dealer = 0}
+        elsif($line =~ /N/){$dealer = 1}
+        elsif($line =~ /S/){$dealer = 3}
+        else               {$dealer = 2}
+    }
+    elsif($line =~ /\[Vulnerable/go){
+        if   ($line =~ /None/){$vul = 0}
+        elsif($line =~ /none/){$vul = 0}
+        elsif($line =~ /\-/){$vul = 0}
+        elsif($line =~ /Love/){$vul = 0}
+        elsif($line =~ /love/){$vul = 0}
+        elsif($line =~ /NS/)  {$vul = 1}
+        elsif($line =~ /ns/)  {$vul = 1}
+        elsif($line =~ /OW/)  {$vul = 2}
+        elsif($line =~ /ow/)  {$vul = 2}
+        else                  {$vul = 3}
+    }
+     elsif($line =~ /\[Deal/){
+        $line =~ s/\[//go;
+        $line =~ s/"//go;
+        $deal = $line;
+        $deal =~ s/Deal//go;
+        ($start,$allcards)=split(/:/,$deal);
+        last;
+    }
+}
+
+# detemine how the players are ordered in pbn
+if($start =~ m/E/){
+($east,$south,$west,$north)=split(/ /,$allcards);
+}
+elsif($start  =~ m/S/){
+($south,$west,$north,$east)=split(/ /,$allcards);
+}
+elsif($start  =~ m/W/){
+($west,$north,$east,$south)=split(/ /,$allcards);
+}
+else{
+($north,$east,$south,$west)=split(/ /,$allcards);
+}
+
+# split in cards per suit
+($north_s,$north_h,$north_d, $north_c)=split(/\./,$north);
+($south_s,$south_h,$south_d, $south_c)=split(/\./,$south);
+($west_s, $west_h, $west_d, $west_c)  =split(/\./,$west);
+($east_s, $east_h, $east_d, $east_c)  =split(/\./,$east);
+
+
+#convert W and N to pos
+$weststr='http://www.himbuv.com/cgi-bin/service/handgen_e.pl?speler=zuid&west=';
+$cardsstri = '';
+
+@wspades  =splitit($west_s);
+@whearts  =splitit($west_h);
+@wdiamonds=splitit($west_d);
+@wclubs   =splitit($west_c);
+
+&handleit(@wspades  ,0,'%2C');
+&handleit(@whearts  ,1,'%2C');
+&handleit(@wdiamonds,2,'%2C');
+&handleit(@wclubs   ,3,'%2C');
+$weststr .= '&noord=';
+@nspades  =splitit($north_s);
+@nhearts  =splitit($north_h);
+@ndiamonds=splitit($north_d);
+@nclubs   =splitit($north_c);
+
+&handleit(@nspades  ,0,'%2C');
+&handleit(@nhearts  ,1,'%2C');
+&handleit(@ndiamonds,2,'%2C');
+&handleit(@nclubs   ,3,'%2C');
+
+&splitcards();
+
+
+@sspades  =splitit($south_s);
+@shearts  =splitit($south_h);
+@sdiamonds=splitit($south_d);
+@sclubs   =splitit($south_c);
+$result='';
+foreach $skaart (@sspades){
+    makesouth(0,$skaart);
+}
+foreach $skaart (@shearts){
+    makesouth(1,$skaart);
+}
+foreach $skaart (@sdiamonds){
+    makesouth(2,$skaart);
+}
+foreach $skaart (@sclubs){
+    makesouth(3,$skaart);
+}
+
+
+$middle="&zuid=&rest=$reststr&deler=$dealer&kwets=$vul&starttime=$starttime";
+
+
+
+#create southhand s1=card number
+#&s4=4&s11=11&s12=12&h0=13&h1=14&h2=15&d0=26&d1=27&d2=28&c3=42&c4=43&c5=44&c6=45&go=Save
+#s0=0
+sub makesouth ($suit,$card){
+
+    my $suit   = shift(@_); #AHT6
+    my $card   = shift(@_);
+    my $kaart;
+
+    $result .= '&';
+
+    if(!$suit){
+        $result .= 's';
+    }
+    elsif($suit == 1){
+       $result .= 'h';
+    }
+    elsif($suit == 2){
+       $result .= 'd';
+    }
+    else{
+        $result .= 'c';
+    }
+
+    $kaart = cardval($suit,$card);
+    $suitpos=$kaart%13;
+
+    # spade ace
+    if(!$kaart){
+        $kaart = 's0=52';
+    }
+    $result.=$suitpos.'=';
+    $result .= $kaart; # d32
+
+}
+
+
+
+$output=$weststr.$middle.$result."&pbn=1&go=save";
+
+print "Location: $output\n\n";exit;
+
+
+
+
+sub cardval($suit,$kaart){
+
+    my $x;
+    ($suit,$kaart) = @_;
+
+        if($kaart eq 'A') {$x=0; }
+        elsif($kaart eq 'K') {$x=1; }
+    elsif($kaart eq 'Q') {$x=2; }
+    elsif($kaart eq 'J') {$x=3; }
+    elsif($kaart eq 'T') {$x=4; }
+    elsif($kaart eq '9') {$x=5; }
+    elsif($kaart eq '8') {$x=6; }
+    elsif($kaart eq '7') {$x=7; }
+    elsif($kaart eq '6') {$x=8; }
+    elsif($kaart eq '5') {$x=9; }
+    elsif($kaart eq '4') {$x=10;}
+    elsif($kaart eq '3') {$x=11;}
+    elsif($kaart eq '2') {$x=12;}
+    $x+=($suit*13);
+
+    return  $x;
+
+}
+
+sub splitit($in_str){
+
+    my $in=shift(@_);
+    my @new=split(//,$in);
+    return @new;
+
+}
+
+sub handleit(){
+
+    my (@new) = @_;
+    $strsep = pop(@new);
+    $val    = pop(@new);
+
+
+    foreach my $card (@new){
+       $in=&cardval($val,$card);
+       $weststr.= $in;
+       push(@knowncards,$in);
+       $weststr.=$strsep;
+    }
+}
+
+sub parse_form {
+
+   read(STDIN, $buffer, $ENV{'CONTENT_LENGTH'});
+   if (length($buffer) < 5) {
+         $buffer = $ENV{QUERY_STRING};
+    }
+   @pairs = split(/&/, $buffer);
+   foreach $pair (@pairs) {
+      ($name, $value) = split(/=/, $pair);
+      $value =~ tr/+/ /;
+      $value =~ s/%([a-fA-F0-9][a-fA-F0-9])/pack("C", hex($1))/eg;
+      $input{$name} = $value;
+   }
+}
+
+
+sub splitcards
+{
+	@all=(0..51);
+	# sort given hand
+
+	@other = sort { $a <=> $b } @knowncards;
+
+	# deduct @other(13) from @all(52) and create @rest(39)
+	foreach $n (@all){
+		$found=0;
+		foreach $s (@other){
+			if($s == $n){
+				$found=1;
+				last;
+			}
+		}
+		if(!$found){
+			push(@rest,$n);
+		}
+	}
+	foreach $x (@rest){
+			$reststr.=$x.'+';
+	}
+
+}
+#http://www.himbuv.com/cgi-bin/service/handgen_e.pl?speler=zuid&west=1%2C3%2C5%2C7%2C9%2C11%2C12%2C13%2C25%2C28%2C30%2C32%2C34%2C&noord=0%2C4%2C6%2C8%2C10%2C15%2C16%2C17%2C21%2C22%2C23%2C27%2C35%2C&zuid=&rest=2+14+18+19+20+24+26+29+31+33+36+37+38+39+40+41+42+43+44+45+46+47+48+49+50+51&deler=1&kwets=2&starttime=1203246835.49643&s2=2&h1=14&h5=18&h6=19&d5=31&d7=33&d11=37&d12=38&c0=39&c3=42&c6=45&c7=46&c9=48&go=Save#http://www.himbuv.com/cgi-bin/service/handgen_e.pl?speler=zuid&west=1%2C3%2C5%2C7%2C9%2C11%2C12%2C13%2C25%2C28%2C30%2C32%2C34%2C&noord=0%2C4%2C6%2C8%2C10%2C15%2C16%2C17%2C21%2C22%2C23%2C27%2C35%2C&zuid=&rest=0%201%203%204%205%206%207%208%209%2010%2011%2012%2013%2015%2016%2017%2021%2022%2023%2025%2027%2028%2030%2032%2034%2035%20&deler=1&kwets=2&starttime=1203246504.07455&s2=2&h1=14&h5=18&h6=19&d5=31&d7=33&d11=37&d12=38&c0=39&c3=42&c6=45&c7=46&c9=48&pbn=1&go=save
+#http://www.himbuv.com/cgi-bin/service/handgen_e.pl?speler=zuid&west=1%2C3%2C5%2C7%2C9%2C11%2C12%2C13%2C25%2C28%2C30%2C32%2C34%2C&noord=0%2C4%2C6%2C8%2C10%2C15%2C16%2C17%2C21%2C22%2C23%2C27%2C35%2C&zuid=&rest=0+1+3+4+5+6+7+8+9+10+11+12+13+15+16+17+21+22+23+25+27+28+30+32+34+35+&deler=1&kwets=2&starttime=1203246760.85139&s2=2&h1=14&h5=18&h6=19&d5=31&d7=33&d11=37&d12=38&c0=39&c3=42&c6=45&c7=46&c9=48&pbn=1&go=save
