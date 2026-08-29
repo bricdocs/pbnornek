@@ -31,20 +31,25 @@ function parseDeal(dealLine) {
     const directions = cleanDeal.split(" ");
     const parsePlayer = (str) => {
         const suits = str.split(".");
-        return { S: parseCards(suits[0]), H: parseCards(suits[1]), D: parseCards(suits[2]), C: parseCards(suits[3]) };
+        return { S: parseCards(suits), H: parseCards(suits), D: parseCards(suits), C: parseCards(suits) };
     };
-    return { N: parsePlayer(directions[0]), E: parsePlayer(directions[1]), S: parsePlayer(directions[2]), W: parsePlayer(directions[3]) };
+    return { N: parsePlayer(directions), E: parsePlayer(directions), S: parsePlayer(directions), W: parsePlayer(directions) };
 }
 
-// Güvenli BBO URL Oluşturucu (Mobil Tarayıcı Uyumlu)
+// Yeni ve Güvenli BBO Link Üretici (Chrome Blokajını Aşan Sürüm)
 function generateBboUrl(dealLine, boardNo, contract) {
-    const cleanDeal = dealLine.replace("N:", "").replace(/ /g, ",");
-    let linData = `md|1${cleanDeal}|`;
-    if (boardNo) linData += `b|${boardNo}|`;
-    if (contract && contract !== "Pas") linData += `ct|${contract}|`;
+    // BBO el formatına uyarlamak için yön takısını siliyoruz ve boşlukları virgüle çeviriyoruz
+    const bboHands = dealLine.replace("N:", "").replace(/ /g, ",");
     
-    // Mobil tarayıcıların adresi doğru çözmesi için encodeURIComponent kullanıyoruz
-    return "https://bridgebase.com" + encodeURIComponent(linData);
+    // Karakter karmaşasını engellemek için parametreleri tek tek ayırıp şifreliyoruz
+    let baseUrl = "https://www.bridgebase.com/tools/handviewer.html";
+    let params = [];
+    
+    params.push("lin=" + encodeURIComponent("md|1" + bboHands));
+    if (boardNo) params.push("b=" + encodeURIComponent(boardNo));
+    if (contract && contract !== "Pas") params.push("ct=" + encodeURIComponent(contract));
+    
+    return baseUrl + "?" + params.join("&");
 }
 
 function updateGallery() {
@@ -85,12 +90,12 @@ fetch('eller.pbn?v=' + Math.random())
         rawBoards.forEach(boardText => {
             if(!boardText.trim()) return;
 
-            const boardNo = boardText.match(/\[Board "([^"]+)"\]/)?. [1] || "?";
-            const dealer = boardText.match(/\[Dealer "([^"]+)"\]/)?. [1] || "?";
-            const vul = boardText.match(/\[Vulnerable "([^"]+)"\]/)?. [1] || "None";
-            const dealLine = boardText.match(/\[Deal "([^"]+)"\]/)?.[1];
-            const contract = boardText.match(/\[Contract "([^"]+)"\]/)?. [1] || "Pas";
-            const result = boardText.match(/\[Result "([^"]+)"\]/)?. [1] || "";
+            const boardNo = boardText.match(/\[Board "([^"]+)"\]/)?. || "?";
+            const dealer = boardText.match(/\[Dealer "([^"]+)"\]/)?. || "?";
+            const vul = boardText.match(/\[Vulnerable "([^"]+)"\]/)?. || "None";
+            const dealLine = boardText.match(/\[Deal "([^"]+)"\]/)?.;
+            const contract = boardText.match(/\[Contract "([^"]+)"\]/)?. || "Pas";
+            const result = boardText.match(/\[Result "([^"]+)"\]/)?. || "";
 
             if (!dealLine) return;
 
@@ -100,8 +105,7 @@ fetch('eller.pbn?v=' + Math.random())
 
             buttonsHtml += '<button id="btn-idx-' + localCounter + '" class="tab-btn ' + activeClass + '" onclick="switchBoard(' + localCounter + ')">Bord ' + boardNo + '</button>';
 
-            galleryHtml += ' ' +
-            '<div id="board-idx-' + localCounter + '" class="board-content ' + activeClass + '">' +
+            galleryHtml += '<div id="board-idx-' + localCounter + '" class="board-content ' + activeClass + '">' +
                 '<div class="bridge-table">' +
                     '<div class="info">Bord ' + boardNo + ' | Dağıtan: ' + dealer + ' | Zafiyet: ' + vul + '<br>Kontrat: ' + contract + ' | Sonuç: ' + result + '</div>' +
                     '<div class="hand north">' +
