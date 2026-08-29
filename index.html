@@ -46,11 +46,27 @@ function parseDeal(dealLine) {
     };
 }
 
-// BBO el görüntüleyici için temiz URL üreten fonksiyon
+// PBN formatını (N,E,S,W) BBO formatına (S,W,N,E) çeviren akıllı fonksiyon
 function generateBboUrl(dealLine, boardNo, contract) {
-    const bboHands = dealLine.replace("N:", "").replace(/ /g, ",");
+    // Yön takısını kaldır ve PBN hatalı harflerini (c vb) temizle, T'leri t yap
+    let clean = dealLine.replace("N:", "").replace(/[cxy]/gi, "").replace(/T/g, "t");
+    let parts = clean.split(" ");
+    
+    if(parts.length < 4) return "https://www.bridgebase.com/tools/handviewer.html";
+
+    // PBN Sıralaması:  0:Kuzey(N), 1:Doğu(E), 2:Güney(S), 3:Batı(W)
+    // BBO Sıralaması:  Güney(S), Batı(W), Kuzey(N), Doğu(E) olmalıdır.
+    // md|Sıra|Güney,Batı,Kuzey,Doğu| şeklinde gönderilir. 'md|1' Güneyden başlatır.
+    let bboFormatHands = `${parts[2]},${parts[3]},${parts[0]},${parts[1]}`;
+    
     const baseUrl = "https://www.bridgebase.com/tools/handviewer.html";
-    const linData = `md|1${bboHands}|b|${boardNo}|ct|${contract}|`;
+    
+    // Sadece sayısal bord değerini al
+    let cleanBoard = boardNo.replace(/[^\d]/g, ""); 
+    let cleanContract = contract.trim().toUpperCase();
+
+    // BBO için LIN parametre metnini oluşturuyoruz
+    let linData = `md|1${bboFormatHands}|b|${cleanBoard || 1}|ct|${cleanContract || 'PAS'}|`;
     return `${baseUrl}?lin=${encodeURIComponent(linData)}`;
 }
 
@@ -81,7 +97,6 @@ function navigateBoard(direction) {
     }
 }
 
-// PBN içindeki tag değerlerini güvenli bir şekilde çeken yardımcı fonksiyon
 function getPbnTag(text, tagName, defaultValue) {
     const regex = new RegExp('\\[' + tagName + ' "([^"]+)"\\]');
     const match = text.match(regex);
@@ -99,7 +114,6 @@ fetch('eller.pbn?v=' + Math.random())
         rawBoards.forEach(boardText => {
             if(!boardText.trim()) return;
 
-            // Güvenli tag okuma sistemine geçildi
             const boardNo = getPbnTag(boardText, "Board", "?");
             const dealer = getPbnTag(boardText, "Dealer", "?");
             const vul = getPbnTag(boardText, "Vulnerable", "None");
