@@ -46,28 +46,54 @@ function parseDeal(dealLine) {
     };
 }
 
-// PBN formatını (N,E,S,W) BBO formatına (S,W,N,E) çeviren akıllı fonksiyon
-function generateBboUrl(dealLine, boardNo, contract) {
-    // Yön takısını kaldır ve PBN hatalı harflerini (c vb) temizle, T'leri t yap
-    let clean = dealLine.replace("N:", "").replace(/[cxy]/gi, "").replace(/T/g, "t");
-    let parts = clean.split(" ");
+// BBO Kılavuzundaki (?s=...&w=...&n=...&e=...) Parametre Standartına Göre URL Üretici
+function generateBboUrl(dealLine, boardNo, contract, dealer, vul) {
+    const cleanDeal = dealLine.replace("N:", "");
+    const parts = cleanDeal.split(" ");
     
     if(parts.length < 4) return "https://www.bridgebase.com/tools/handviewer.html";
 
-    // PBN Sıralaması:  0:Kuzey(N), 1:Doğu(E), 2:Güney(S), 3:Batı(W)
-    // BBO Sıralaması:  Güney(S), Batı(W), Kuzey(N), Doğu(E) olmalıdır.
-    // md|Sıra|Güney,Batı,Kuzey,Doğu| şeklinde gönderilir. 'md|1' Güneyden başlatır.
-    let bboFormatHands = `${parts[2]},${parts[3]},${parts[0]},${parts[1]}`;
-    
+    // PBN'deki Noktalı Veriyi BBO'nun Tanıyacağı "s...h...d...c..." Formatına Çeviren Fonksiyon
+    const formatHandForBbo = (pbnHandString) => {
+        if (!pbnHandString) return "";
+        // PBN'deki onlu "T" harflerini BBO standardı olan "t" harfine çeviriyoruz
+        const cleanHand = pbnHandString.replace(/T/g, "t").replace(/[cxy]/gi, "");
+        const suits = cleanHand.split(".");
+        return `s${suits[0] || ""}h${suits[1] || ""}d${suits[2] || ""}c${suits[3] || ""}`;
+    };
+
+    // PBN Sıralaması -> 0:Kuzey, 1:Doğu, 2:Güney, 3:Batı
+    const northBbo = formatHandForBbo(parts[0]);
+    const eastBbo  = formatHandForBbo(parts[1]);
+    const southBbo = formatHandForBbo(parts[2]);
+    const westBbo  = formatHandForBbo(parts[3]);
+
     const baseUrl = "https://www.bridgebase.com/tools/handviewer.html";
     
-    // Sadece sayısal bord değerini al
-    let cleanBoard = boardNo.replace(/[^\d]/g, ""); 
-    let cleanContract = contract.trim().toUpperCase();
+    // Zafiyet (Vulnerability) BBO Karşılıkları: None -> n, All -> b, NS -> n, EW -> e
+    let bboVul = "n";
+    if (vul) {
+        const v = vul.toUpperCase();
+        if(v === "NONE") bboVul = "n";
+        else if(v === "ALL" || v === "BOTH") bboVul = "b";
+        else if(v === "NS") bboVul = "n";
+        else if(v === "EW") bboVul = "e";
+    }
 
-    // BBO için LIN parametre metnini oluşturuyoruz
-    let linData = `md|1${bboFormatHands}|b|${cleanBoard || 1}|ct|${cleanContract || 'PAS'}|`;
-    return `${baseUrl}?lin=${encodeURIComponent(linData)}`;
+    // Dağıtan (Dealer) BBO Karşılığı: Küçük harf olmalı (n, e, s, w)
+    let bboDealer = dealer ? dealer.trim().toLowerCase() : "n";
+
+    // Kılavuza uygun parametre dizisi oluşturuluyor
+    let params = [];
+    params.push(`n=${encodeURIComponent(northBbo)}`);
+    params.push(`e=${encodeURIComponent(eastBbo)}`);
+    params.push(`s=${encodeURIComponent(southBbo)}`);
+    params.push(`w=${encodeURIComponent(westBbo)}`);
+    params.push(`d=${encodeURIComponent(bboDealer)}`);
+    params.push(`v=${encodeURIComponent(bboVul)}`);
+    if (boardNo) params.push(`b=${encodeURIComponent(boardNo.replace(/[^\d]/g, ""))}`);
+
+    return `${baseUrl}?${params.join("&")}`;
 }
 
 function updateGallery() {
@@ -125,7 +151,7 @@ fetch('eller.pbn?v=' + Math.random())
 
             const cards = parseDeal(dealLine);
             const activeClass = (localCounter === 0) ? "active" : "";
-            const bboUrl = generateBboUrl(dealLine, boardNo, contract);
+            const bboUrl = generateBboUrl(dealLine, boardNo, contract, dealer, vul);
 
             buttonsHtml += `<button id="btn-idx-${localCounter}" class="tab-btn ${activeClass}" onclick="switchBoard(${localCounter})">Bord ${boardNo}</button>`;
 
