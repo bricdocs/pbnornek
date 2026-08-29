@@ -4,7 +4,6 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>PBN Briç El Galerisi & BBO Viewer</title>
-    <!-- Tasarım dosyasını buraya bağlıyoruz -->
     <link rel="stylesheet" href="style.css">
 </head>
 <body>
@@ -37,12 +36,15 @@ function parseDeal(dealLine) {
     return { N: parsePlayer(directions[0]), E: parsePlayer(directions[1]), S: parsePlayer(directions[2]), W: parsePlayer(directions[3]) };
 }
 
+// Güvenli BBO URL Oluşturucu (Mobil Tarayıcı Uyumlu)
 function generateBboUrl(dealLine, boardNo, contract) {
     const cleanDeal = dealLine.replace("N:", "").replace(/ /g, ",");
-    let bboUrl = `https://bridgebase.com|1${cleanDeal}|`;
-    if (boardNo) bboUrl += `b|${boardNo}|`;
-    if (contract && contract !== "Pas") bboUrl += `ct|${contract}|`;
-    return bboUrl;
+    let linData = `md|1${cleanDeal}|`;
+    if (boardNo) linData += `b|${boardNo}|`;
+    if (contract && contract !== "Pas") linData += `ct|${contract}|`;
+    
+    // Mobil tarayıcıların adresi doğru çözmesi için encodeURIComponent kullanıyoruz
+    return "https://bridgebase.com" + encodeURIComponent(linData);
 }
 
 function updateGallery() {
@@ -83,12 +85,12 @@ fetch('eller.pbn?v=' + Math.random())
         rawBoards.forEach(boardText => {
             if(!boardText.trim()) return;
 
-            const boardNo = boardText.match(/\[Board "([^"]+)"\]/)?.[1] || "?";
-            const dealer = boardText.match(/\[Dealer "([^"]+)"\]/)?.[1] || "?";
-            const vul = boardText.match(/\[Vulnerable "([^"]+)"\]/)?.[1] || "None";
+            const boardNo = boardText.match(/\[Board "([^"]+)"\]/)?. [1] || "?";
+            const dealer = boardText.match(/\[Dealer "([^"]+)"\]/)?. [1] || "?";
+            const vul = boardText.match(/\[Vulnerable "([^"]+)"\]/)?. [1] || "None";
             const dealLine = boardText.match(/\[Deal "([^"]+)"\]/)?.[1];
-            const contract = boardText.match(/\[Contract "([^"]+)"\]/)?.[1] || "Pas";
-            const result = boardText.match(/\[Result "([^"]+)"\]/)?.[1] || "";
+            const contract = boardText.match(/\[Contract "([^"]+)"\]/)?. [1] || "Pas";
+            const result = boardText.match(/\[Result "([^"]+)"\]/)?. [1] || "";
 
             if (!dealLine) return;
 
@@ -96,42 +98,42 @@ fetch('eller.pbn?v=' + Math.random())
             const activeClass = (localCounter === 0) ? "active" : "";
             const bboUrl = generateBboUrl(dealLine, boardNo, contract);
 
-            buttonsHtml += `<button id="btn-idx-${localCounter}" class="tab-btn ${activeClass}" onclick="switchBoard(${localCounter})">Bord ${boardNo}</button>`;
+            buttonsHtml += '<button id="btn-idx-' + localCounter + '" class="tab-btn ' + activeClass + '" onclick="switchBoard(' + localCounter + ')">Bord ' + boardNo + '</button>';
 
-            galleryHtml += `
-            <div id="board-idx-${localCounter}" class="board-content ${activeClass}">
-                <div class="bridge-table">
-                    <div class="info">Bord ${boardNo} | Dağıtan: ${dealer} | Zafiyet: ${vul}<br>Kontrat: ${contract} | Sonuç: ${result}</div>
-                    <div class="hand north">
-                        <div class="suit"><span class="spade">♠</span> ${cards.N.S}</div>
-                        <div class="suit"><span class="heart">♥</span> ${cards.N.H}</div>
-                        <div class="suit"><span class="diamond">♦</span> ${cards.N.D}</div>
-                        <div class="suit"><span class="club">♣</span> ${cards.N.C}</div>
-                    </div>
-                    <div class="middle-row">
-                        <div class="hand west">
-                            <div class="suit"><span class="spade">♠</span> ${cards.W.S}</div>
-                            <div class="suit"><span class="heart">♥</span> ${cards.W.H}</div>
-                            <div class="suit"><span class="diamond">♦</span> ${cards.W.D}</div>
-                            <div class="suit"><span class="club">♣</span> ${cards.W.C}</div>
-                        </div>
-                        <div class="compass"><div>N</div><div style="display:flex; gap:15px;"><span>W</span><span>E</span></div><div>S</div></div>
-                        <div class="hand east">
-                            <div class="suit"><span class="spade">♠</span> ${cards.E.S}</div>
-                            <div class="suit"><span class="heart">♥</span> ${cards.E.H}</div>
-                            <div class="suit"><span class="diamond">♦</span> ${cards.E.D}</div>
-                            <div class="suit"><span class="club">♣</span> ${cards.E.C}</div>
-                        </div>
-                    </div>
-                    <div class="hand south">
-                        <div class="suit"><span class="spade">♠</span> ${cards.S.S}</div>
-                        <div class="suit"><span class="heart">♥</span> ${cards.S.H}</div>
-                        <div class="suit"><span class="diamond">♦</span> ${cards.S.D}</div>
-                        <div class="suit"><span class="club">♣</span> ${cards.S.C}</div>
-                    </div>
-                </div>
-                <a href="${bboUrl}" target="_blank" class="bbo-btn">BBO'da İnteraktif Oyna</a>
-            </div>`;
+            galleryHtml += ' ' +
+            '<div id="board-idx-' + localCounter + '" class="board-content ' + activeClass + '">' +
+                '<div class="bridge-table">' +
+                    '<div class="info">Bord ' + boardNo + ' | Dağıtan: ' + dealer + ' | Zafiyet: ' + vul + '<br>Kontrat: ' + contract + ' | Sonuç: ' + result + '</div>' +
+                    '<div class="hand north">' +
+                        '<div class="suit"><span class="spade">♠</span> ' + cards.N.S + '</div>' +
+                        '<div class="suit"><span class="heart">♥</span> ' + cards.N.H + '</div>' +
+                        '<div class="suit"><span class="diamond">♦</span> ' + cards.N.D + '</div>' +
+                        '<div class="suit"><span class="club">♣</span> ' + cards.N.C + '</div>' +
+                    '</div>' +
+                    '<div class="middle-row">' +
+                        '<div class="hand west">' +
+                            '<div class="suit"><span class="spade">♠</span> ' + cards.W.S + '</div>' +
+                            '<div class="suit"><span class="heart">♥</span> ' + cards.W.H + '</div>' +
+                            '<div class="suit"><span class="diamond">♦</span> ' + cards.W.D + '</div>' +
+                            '<div class="suit"><span class="club">♣</span> ' + cards.W.C + '</div>' +
+                        '</div>' +
+                        '<div class="compass"><div>N</div><div style="display:flex; gap:15px;"><span>W</span><span>E</span></div><div>S</div></div>' +
+                        '<div class="hand east">' +
+                            '<div class="suit"><span class="spade">♠</span> ' + cards.E.S + '</div>' +
+                            '<div class="suit"><span class="heart">♥</span> ' + cards.E.H + '</div>' +
+                            '<div class="suit"><span class="diamond">♦</span> ' + cards.E.D + '</div>' +
+                            '<div class="suit"><span class="club">♣</span> ' + cards.E.C + '</div>' +
+                        '</div>' +
+                    '</div>' +
+                    '<div class="hand south">' +
+                        '<div class="suit"><span class="spade">♠</span> ' + cards.S.S + '</div>' +
+                        '<div class="suit"><span class="heart">♥</span> ' + cards.S.H + '</div>' +
+                        '<div class="suit"><span class="diamond">♦</span> ' + cards.S.D + '</div>' +
+                        '<div class="suit"><span class="club">♣</span> ' + cards.S.C + '</div>' +
+                    '</div>' +
+                '</div>' +
+                '<a href="' + bboUrl + '" target="_blank" class="bbo-btn">BBO\'da İnteraktif Oyna</a>' +
+            '</div>';
             
             localCounter++;
         });
