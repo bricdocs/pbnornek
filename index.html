@@ -5,11 +5,11 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>PBN Briç El Galerisi & BBO Viewer</title>
     <link rel="stylesheet" href="style.css">
-    <!-- v1.4 Baseline -->
+    <!-- v1.5 Baseline -->
 </head>
 <body>
 
-    <h1>Turnuva Sonuçları (BBO Entegrasyonlu - v1.4)</h1>
+    <h1>Turnuva Sonuçları (BBO Entegrasyonlu - v1.5)</h1>
     <div id="tabs" class="tab-container"></div>
     <div id="gallery-container">PBN Dosyası Yükleniyor...</div>
 
@@ -29,7 +29,7 @@ function parseDeal(dealLine) {
     return { N: getHand(p[0]), E: getHand(p[1]), S: getHand(p[2]), W: getHand(p[3]) };
 }
 
-// BBO hvdoc Kılavuz Standartlarına Göre Geliştirilen Gerçek LIN Üretici (v1.4)
+// BBO hvdoc Kılavuz Standartlarına Göre Geliştirilen Gerçek LIN Üretici (v1.5)
 function generateBboUrl(dealLine, boardNo, contract, dealer, vul) {
     let clean = dealLine.replace("N:", "").replace(/[cxy]/gi, "").toUpperCase();
     let parts = clean.split(" ");
@@ -48,7 +48,6 @@ function generateBboUrl(dealLine, boardNo, contract, dealer, vul) {
     let northLin = buildLinHand(parts[0]);
     let eastLin  = buildLinHand(parts[1]);
 
-    // v1.4 Düzeltmesi: String birleştirme hatası klasik yöntemle güvenli hale getirildi
     let bboHands = southLin + "," + westLin + "," + northLin + "," + eastLin;
     
     const vMap = { "NONE": "o", "ALL": "b", "BOTH": "b", "NS": "n", "EW": "e" };
@@ -64,7 +63,8 @@ function generateBboUrl(dealLine, boardNo, contract, dealer, vul) {
         biddingSequence = "mb|p|mb|p|mb|p|mb|p|";
     }
 
-    let linData = "md|1" + bboHands + "|ah|Board " + (boardNo || 1) + "|sv|" + bboVul + "|" + biddingSequence;
+    let cleanBoard = String(boardNo).replace(/[^\d]/g, "");
+    let linData = "md|1" + bboHands + "|ah|Board " + (cleanBoard || 1) + "|sv|" + bboVul + "|" + biddingSequence;
     
     return "https://bridgebase.com" + encodeURIComponent(linData);
 }
@@ -82,6 +82,7 @@ function updateGallery() {
 function switchBoard(index) { currentIndex = index; updateGallery(); }
 function navigateBoard(d) { if (currentIndex + d >= 0 && currentIndex + d < totalBoards) { currentIndex += d; updateGallery(); } }
 
+// v1.5 Düzeltmesi: PBN tag verisini dizi olarak değil, saf metin (match[1]) olarak döndürür
 function getPbnTag(text, tagName, defaultValue) {
     const regex = new RegExp('\\[' + tagName + ' "([^"]+)"\\]');
     const match = text.match(regex);
