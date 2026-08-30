@@ -4,13 +4,12 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>PBN Briç El Galerisi & BBO Viewer</title>
-    <!-- style.css dosyanıza dokunmanıza gerek yoktur, doğrudan bağlı kalır -->
     <link rel="stylesheet" href="style.css">
-    <!-- v1.3 Baseline -->
+    <!-- v1.4 Baseline -->
 </head>
 <body>
 
-    <h1>Turnuva Sonuçları (BBO Entegrasyonlu - v1.3)</h1>
+    <h1>Turnuva Sonuçları (BBO Entegrasyonlu - v1.4)</h1>
     <div id="tabs" class="tab-container"></div>
     <div id="gallery-container">PBN Dosyası Yükleniyor...</div>
 
@@ -30,47 +29,42 @@ function parseDeal(dealLine) {
     return { N: getHand(p[0]), E: getHand(p[1]), S: getHand(p[2]), W: getHand(p[3]) };
 }
 
-// BBO hvdoc Kılavuz Standartlarına Göre Geliştirilen Gerçek LIN Üretici (v1.3)
+// BBO hvdoc Kılavuz Standartlarına Göre Geliştirilen Gerçek LIN Üretici (v1.4)
 function generateBboUrl(dealLine, boardNo, contract, dealer, vul) {
-    // 1. Adım: PBN'deki gereksiz karakterleri temizle, harfleri BBO LIN kuralı gereği BÜYÜK yap
     let clean = dealLine.replace("N:", "").replace(/[cxy]/gi, "").toUpperCase();
     let parts = clean.split(" ");
     if(parts.length < 4) return "#";
 
-    // 2. Adım: Her yönün rengini ayırıp başına BBO standart renk harflerini (S, H, D, C) ekleyen fonksiyon
+    // Kılavuz Kuralı: Noktalı el verisini BBO'nun tanıdığı S...H...D...C... formatına çevirir
     const buildLinHand = (pbnHandStr) => {
         if (!pbnHandStr) return "";
         let suits = pbnHandStr.split(".");
-        // Boş renkleri de hesaba katarak S, H, D, C harflerini ekliyoruz
-        return "S" + (suits[0]||"") + "H" + (suits[1]||"") + "D" + (suits[2]||"") + "C" + (suits[3]||"");
+        return "S" + (suits[0] || "") + "H" + (suits[1] || "") + "D" + (suits[2] || "") + "C" + (suits[3] || "");
     };
 
-    // 3. Adım: PBN (Kuzey, Doğu, Güney, Batı) dizilimini BBO LIN (Güney, Batı, Kuzey, Doğu) sırasına sok
+    // Kılavuz Kuralı: PBN (N,E,S,W) sırasını BBO LIN (Güney,Batı,Kuzey,Doğu) sırasına sokar
     let southLin = buildLinHand(parts[2]);
     let westLin  = buildLinHand(parts[3]);
-    let northLin = buildLinHand(parts[1]); // Kılavuza göre md|1 modunda sıralama Güney, Batı, Kuzey, Doğu
-    let eastLin  = buildLinHand(parts[0]);
+    let northLin = buildLinHand(parts[0]);
+    let eastLin  = buildLinHand(parts[1]);
 
-    let bboHands = `${southLin},${westLin},${northLin},${eastLin}`;
+    // v1.4 Düzeltmesi: String birleştirme hatası klasik yöntemle güvenli hale getirildi
+    let bboHands = southLin + "," + westLin + "," + northLin + "," + eastLin;
     
-    // 4. Adım: Zafiyet (Vulnerability) BBO LIN Harita Karşılıkları (o, b, n, e)
     const vMap = { "NONE": "o", "ALL": "b", "BOTH": "b", "NS": "n", "EW": "e" };
     const bboVul = vul ? (vMap[vul.toUpperCase().trim()] || "o") : "o";
 
-    // 5. Adım: Kontratı BBO LIN İhale diline çevir (1NT -> 1N, 4HE -> 4H)
     let bboContract = contract.trim().toUpperCase().replace(/NT/g, "N");
     if(bboContract === "PAS" || bboContract === "PASS") bboContract = "P";
 
-    // 6. Adım: Butonların tıklanabilir olması için kılavuz zorunluluğu olan ihale (mb) geçmişini ekle
     let biddingSequence = "";
     if (bboContract !== "P" && bboContract !== "PAS") {
-        biddingSequence = `mb|${bboContract}|mb|p|mb|p|mb|p|`;
+        biddingSequence = "mb|" + bboContract + "|mb|p|mb|p|mb|p|";
     } else {
         biddingSequence = "mb|p|mb|p|mb|p|mb|p|";
     }
 
-    // Kılavuzdaki Resmi LIN Parametrik Blok Düzeni
-    let linData = `md|1${bboHands}|ah|Board ${boardNo || 1}|sv|${bboVul}|${biddingSequence}`;
+    let linData = "md|1" + bboHands + "|ah|Board " + (boardNo || 1) + "|sv|" + bboVul + "|" + biddingSequence;
     
     return "https://bridgebase.com" + encodeURIComponent(linData);
 }
@@ -88,6 +82,12 @@ function updateGallery() {
 function switchBoard(index) { currentIndex = index; updateGallery(); }
 function navigateBoard(d) { if (currentIndex + d >= 0 && currentIndex + d < totalBoards) { currentIndex += d; updateGallery(); } }
 
+function getPbnTag(text, tagName, defaultValue) {
+    const regex = new RegExp('\\[' + tagName + ' "([^"]+)"\\]');
+    const match = text.match(regex);
+    return match ? match[1] : defaultValue;
+}
+
 fetch('eller.pbn?v=' + Math.random())
     .then(r => r.text())
     .then(text => {
@@ -96,11 +96,14 @@ fetch('eller.pbn?v=' + Math.random())
         let buttonsHtml = "", galleryHtml = "", localCounter = 0;
 
         rawBoards.forEach(boardText => {
-            if(!boardText.includes("[Deal")) return;
+            if(!boardText.trim()) return;
 
-            const tag = (t) => { const m = boardText.match(new RegExp('\\[' + t + ' "([^"]+)"\\]')); return m ? m[1] : ""; };
-            const boardNo = tag("Board") || "?", dealer = tag("Dealer") || "?", vul = tag("Vulnerable") || "None";
-            const dealLine = tag("Deal"), contract = tag("Contract") || "Pas", result = tag("Result") || "";
+            const boardNo = getPbnTag(boardText, "Board", "?");
+            const dealer = getPbnTag(boardText, "Dealer", "?");
+            const vul = getPbnTag(boardText, "Vulnerable", "None");
+            const dealLine = getPbnTag(boardText, "Deal", null);
+            const contract = getPbnTag(boardText, "Contract", "Pas");
+            const result = getPbnTag(boardText, "Result", "");
 
             if (!dealLine) return;
             const cards = parseDeal(dealLine);
