@@ -57,7 +57,9 @@ function generateBboUrl(dealLine, boardNo, contract, dealer, vul) {
     const formatHandForBbo = (pbnHandString) => {
         if (!pbnHandString) return "";
         // PBN'deki onlu "T" harflerini BBO standardı olan "t" harfine çeviriyoruz
-        const cleanHand = pbnHandString.replace(/T/g, "t").replace(/[cxy]/gi, "");
+        
+        const cleanHand = pbnHandString.replace(/T/g, "t").replace(/[cxy]/gi, "").toLowerCase();
+
         const suits = cleanHand.split(".");
         return `s${suits[0] || ""}h${suits[1] || ""}d${suits[2] || ""}c${suits[3] || ""}`;
     };
