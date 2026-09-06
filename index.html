@@ -1,34 +1,54 @@
+```html
 <!DOCTYPE html>
 <html lang="tr">
 <head>
     <meta charset="UTF-8">
-    <title>BBO Handplayer Test</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <title>BBO Handviewer Test</title>
 
     <style>
         body {
+            margin: 0;
+            padding: 20px;
             background: #222;
             color: white;
             font-family: Arial, sans-serif;
             text-align: center;
         }
 
+        h1 {
+            margin-bottom: 20px;
+        }
+
+        .viewer {
+            width: 900px;
+            max-width: 100%;
+            height: 650px;
+            margin: auto;
+        }
+
         iframe {
+            width: 100%;
+            height: 100%;
             border: none;
-            width: 700px;
-            height: 600px;
-            background: white;
         }
     </style>
 </head>
 
 <body>
 
-<h2>BBO Handplayer Test</h2>
+    <h1>BBO Handviewer - Oynanabilir El</h1>
 
-<iframe
-    src="https://www.bridgebase.com/tools/handplayer.html?deal=n:SAKQJH987D654C32,s:S543HAT6DKQJC987,e:S987H32DA9876CKQ,w:S2HKQJ5DJ32CAJT&bids=1SP2CP4SP&play=C2"
-    allowfullscreen>
-</iframe>
+    <div class="viewer">
+
+        <iframe
+            src="https://www.bridgebase.com/tools/handviewer.html?s=SAKQJH987D654C32&n=S543HAT6DKQJC987&e=S987H32DA9876CKQ&w=S2HKQJ5DJ32CAJT&d=n&v=-&a=1SP2CP4S"
+            allowfullscreen>
+        </iframe>
+
+    </div>
 
 </body>
 </html>
+```
